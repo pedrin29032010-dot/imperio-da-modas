@@ -1,0 +1,740 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Império da Modas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#101010;color:white;font-family:Arial,sans-serif}
+header{background:#080808;text-align:center;padding:28px 10px;border-bottom:2px solid #d4af37}
+header h1{color:#d4af37;font-size:32px;letter-spacing:3px}
+header p{color:#ccc;margin-top:8px}
+nav{background:#191919;display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding:16px}
+nav button{padding:12px 17px;background:transparent;border:1px solid #d4af37;color:white;border-radius:5px;cursor:pointer;font-weight:bold}
+nav button.active,nav button:hover{background:#d4af37;color:black}
+.banner{text-align:center;padding:65px 15px;background:linear-gradient(120deg,#292929,#080808)}
+.banner h2{color:#d4af37;font-size:32px;margin-bottom:12px}
+.banner p{color:#ddd}
+.container{max-width:1200px;margin:auto;padding:35px 20px}
+.section-title{text-align:center;color:#d4af37;margin-bottom:30px;font-size:27px}
+.status{text-align:center;color:#ccc;margin-bottom:20px}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px}
+.product{background:#1c1c1c;border:1px solid #333;border-radius:9px;overflow:hidden;text-align:center;position:relative;transition:.3s}
+.product:hover{transform:translateY(-4px);border-color:#d4af37}
+.image-area{height:280px;background:#292929;cursor:pointer}
+.product img{width:100%;height:100%;object-fit:cover;display:block}
+.product h3{padding:15px 5px 5px}
+.price{color:#d4af37;font-size:19px;font-weight:bold;margin:10px 0}
+.stock{display:inline-block;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:bold;margin:8px 0}
+.available{background:#145c32;color:#8dffb0}
+.low{background:#70530a;color:#ffe28a}
+.soldout{background:#752020;color:#ffaaaa}
+.add-button{background:#d4af37;color:black;border:none;padding:12px 18px;margin:10px 0 18px;border-radius:5px;font-weight:bold;cursor:pointer}
+.add-button:disabled{background:#555;color:#aaa;cursor:not-allowed}
+.promo{position:absolute;top:12px;left:10px;background:#c62828;padding:8px 12px;border-radius:4px;font-size:12px;font-weight:bold;z-index:2}
+.cart-float{position:fixed;bottom:20px;right:15px;z-index:100;background:#d4af37;color:black;border:0;border-radius:50px;padding:15px 20px;font-weight:bold;cursor:pointer}
+.whatsapp-float{position:fixed;bottom:78px;right:15px;z-index:99;background:#25D366;color:white;padding:13px 18px;border-radius:50px;text-decoration:none;font-weight:bold}
+.cart-panel,.detail-panel,.zoom-panel{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.9);justify-content:center;align-items:center;padding:15px}
+.cart-panel.open,.detail-panel.open,.zoom-panel.open{display:flex}
+.cart-content,.detail-content{background:#1c1c1c;border:1px solid #d4af37;border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:22px}
+.cart-header,.detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.cart-header h2,.detail-header h2{color:#d4af37}
+.close-cart{background:transparent;border:0;color:white;font-size:28px;cursor:pointer}
+.cart-item{display:flex;gap:12px;align-items:center;border-bottom:1px solid #444;padding:13px 0}
+.cart-item img{width:70px;height:80px;object-fit:cover;border-radius:5px}
+.cart-info{flex:1}
+.cart-info h3{font-size:15px}
+.cart-info p{color:#ccc;font-size:13px;margin-top:5px}
+.quantity{display:flex;align-items:center;gap:9px;margin-top:8px}
+.quantity button{background:#d4af37;color:black;border:0;padding:6px 10px;border-radius:4px;cursor:pointer}
+.quantity .remove{background:#9c2525;color:white}
+.cart-total{border-top:1px solid #555;margin-top:18px;padding-top:15px;color:#d4af37;font-weight:bold}
+.checkout{width:100%;margin-top:18px;padding:15px;background:#20a45a;color:white;border:0;border-radius:6px;font-weight:bold;font-size:15px;cursor:pointer}
+.clear-cart{display:block;margin:12px auto 0;background:transparent;color:#ff7777;border:0;cursor:pointer}
+.empty{text-align:center;color:#bbb;padding:30px 10px}
+
+/* DETALHES DO PRODUTO */
+.detail-image{width:100%;height:390px;object-fit:contain;background:#292929;border-radius:8px;cursor:zoom-in}
+.detail-name{font-size:25px;margin:18px 0 8px}
+.detail-price{font-size:25px;color:#d4af37;font-weight:bold;margin:12px 0}
+.detail-description{color:#ccc;line-height:1.6;margin:15px 0}
+.detail-specs{background:#292929;padding:15px;border-radius:8px;margin:15px 0;color:#ddd;line-height:1.8}
+.size-title{color:#d4af37;font-weight:bold;margin:18px 0 10px}
+.sizes{display:flex;gap:8px;flex-wrap:wrap}
+.size-option{background:#292929;border:1px solid #777;color:white;padding:12px 15px;border-radius:5px;cursor:pointer}
+.size-option.selected{background:#d4af37;color:black;border-color:#d4af37;font-weight:bold}
+.size-option:disabled{opacity:.3;cursor:not-allowed}
+.detail-buy{width:100%;background:#d4af37;color:black;padding:15px;border:0;border-radius:6px;font-weight:bold;margin-top:20px;cursor:pointer;font-size:15px}
+.back-button{background:#333;color:white;border:1px solid #777;padding:10px 15px;border-radius:5px;cursor:pointer}
+.zoom-image{max-width:95vw;max-height:85vh;object-fit:contain}
+.zoom-close{position:absolute;top:15px;right:20px;background:#d4af37;color:black;border:0;border-radius:50%;width:40px;height:40px;font-size:25px;cursor:pointer}
+footer{background:#080808;text-align:center;padding:30px 10px;border-top:2px solid #d4af37;color:#aaa}
+footer strong{color:#d4af37}
+
+@media(max-width:500px){
+header h1{font-size:25px}
+.banner h2{font-size:25px}
+.image-area{height:230px}
+nav{gap:8px}
+nav button{padding:10px 12px;font-size:12px}
+.detail-image{height:300px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>IMPÉRIO DA MODAS</h1>
+<p>Seu estilo, sua identidade.</p>
+</header>
+
+<nav id="menu">
+<button class="active" data-filter="todos">INÍCIO</button>
+<button data-filter="masculino">MASCULINO</button>
+<button data-filter="conjuntos">CONJUNTOS</button>
+<button data-filter="promocao">🔥 PROMOÇÕES</button>
+</nav>
+
+<section class="banner">
+<h2>VISTA SEU ESTILO!</h2>
+<p>Qualidade, atitude e personalidade em cada peça.</p>
+</section>
+
+<main class="container">
+<h2 class="section-title" id="titulo">NOSSOS PRODUTOS</h2>
+<p class="status" id="status">Carregando produtos...</p>
+<div class="products" id="listaProdutos"></div>
+</main>
+
+<button class="cart-float" onclick="abrirCarrinho()">
+🛒 CARRINHO (<span id="cart-count">0</span>)
+</button>
+
+<a class="whatsapp-float" href="https://wa.me/5534997211828" target="_blank" rel="noopener">WHATSAPP</a>
+
+<!-- DETALHES -->
+<div class="detail-panel" id="detail-panel" onclick="fecharDetalheFundo(event)">
+<div class="detail-content">
+<div class="detail-header">
+<h2>DETALHES DO PRODUTO</h2>
+<button class="close-cart" onclick="fecharDetalhes()">×</button>
+</div>
+
+<img id="detail-image" class="detail-image" src="" alt="Foto do produto" onclick="ampliarFoto()">
+
+<h2 class="detail-name" id="detail-name"></h2>
+<div class="detail-price" id="detail-price"></div>
+<div class="detail-description" id="detail-description"></div>
+
+<div class="detail-specs" id="detail-specs"></div>
+
+<div class="size-title">ESCOLHA SEU TAMANHO:</div>
+<div class="sizes" id="detail-sizes"></div>
+
+<button class="detail-buy" id="detail-buy" onclick="adicionarDetalhe()">
+ADICIONAR AO CARRINHO
+</button>
+</div>
+</div>
+
+<!-- FOTO AMPLIADA -->
+<div class="zoom-panel" id="zoom-panel" onclick="fecharZoom()">
+<button class="zoom-close" onclick="fecharZoom()">×</button>
+<img id="zoom-image" class="zoom-image" src="" alt="Foto ampliada">
+</div>
+
+<!-- CARRINHO -->
+<div class="cart-panel" id="cart-panel" onclick="fecharFundo(event)">
+<div class="cart-content">
+<div class="cart-header">
+<h2>MEU CARRINHO</h2>
+<button class="close-cart" onclick="fecharCarrinho()">×</button>
+</div>
+<div id="cart-items"></div>
+<div class="cart-total" id="cart-total">Consulte os valores pelo WhatsApp.</div>
+<button class="checkout" onclick="finalizarPedido()">FINALIZAR PEDIDO PELO WHATSAPP</button>
+<button class="clear-cart" onclick="limparCarrinho()">Limpar carrinho</button>
+</div>
+</div>
+
+<footer>
+<strong>IMPÉRIO DA MODAS</strong>
+<p>Seu estilo começa aqui.</p>
+<p>WhatsApp: (34) 99721-1828</p>
+<p>© 2026 - Todos os direitos reservados.</p>
+</footer>
+
+<script>
+
+// ======================================
+// SUPABASE
+// ======================================
+
+const SUPABASE_URL = "https://dkwaiwaetoitvvpxpkwb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_OpgylmUsZWDGLQgWxKL10A_MCACSlyl";
+
+const banco = window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
+
+// ======================================
+// VARIÁVEIS
+// ======================================
+
+let produtos = [];
+let carrinho = [];
+let filtroAtual = "todos";
+let produtoSelecionado = null;
+let tamanhoSelecionado = "";
+
+const tamanhosPadrao = [
+"P","M","G","GG","XG","XGG","G1","G2","G3"
+];
+
+// ======================================
+// CARREGAR PRODUTOS
+// ======================================
+
+async function carregarProdutos(){
+
+const status = document.getElementById("status");
+status.textContent = "Carregando produtos...";
+
+const {data,error} = await banco
+.from("produtos")
+.select("*")
+.order("criado_em",{ascending:false});
+
+if(error){
+console.error(error);
+status.textContent = "Erro ao carregar produtos. Verifique as permissões do Supabase.";
+return;
+}
+
+produtos = data.map(p => ({
+id:p.id,
+nome:p.nome || "Produto",
+imagem:p.imagem || "",
+preco:Number(p.preco || 0),
+estoque:Number(p.estoque || 0),
+categoria:String(p.categoria || "").toLowerCase().trim(),
+promocao:p.promocao === true,
+descricao:p.descricao || "",
+especificacoes:p.especificacoes || "",
+tamanhos:normalizarTamanhos(p.tamanhos)
+}));
+
+status.textContent = produtos.length
+? produtos.length + " produto(s) encontrado(s)"
+: "Ainda não existem produtos cadastrados.";
+
+renderizarProdutos();
+atualizarCarrinho();
+}
+
+// ======================================
+// TAMANHOS
+// ======================================
+
+function normalizarTamanhos(valor){
+
+if(!valor) return [...tamanhosPadrao];
+
+if(Array.isArray(valor)) return valor;
+
+if(typeof valor === "string"){
+try{
+const convertido = JSON.parse(valor);
+if(Array.isArray(convertido)) return convertido;
+}catch(e){}
+
+return valor.split(",").map(t => t.trim()).filter(Boolean);
+}
+
+return [...tamanhosPadrao];
+}
+
+// ======================================
+// PREÇO
+// ======================================
+
+function formatarPreco(valor){
+return Number(valor).toLocaleString("pt-BR",{
+style:"currency",
+currency:"BRL"
+});
+}
+
+// ======================================
+// ESTOQUE
+// ======================================
+
+function situacaoEstoque(estoque){
+
+if(estoque <= 0)
+return {texto:"ESGOTADO",classe:"soldout"};
+
+if(estoque <= 3)
+return {texto:"ÚLTIMAS UNIDADES: "+estoque,classe:"low"};
+
+return {texto:"DISPONÍVEL: "+estoque,classe:"available"};
+}
+
+// ======================================
+// MOSTRAR PRODUTOS
+// ======================================
+
+function renderizarProdutos(){
+
+const lista = document.getElementById("listaProdutos");
+lista.innerHTML = "";
+
+const encontrados = produtos.filter(p => {
+
+if(filtroAtual === "todos") return true;
+if(filtroAtual === "promocao") return p.promocao;
+
+return p.categoria === filtroAtual;
+});
+
+encontrados.forEach(p => {
+
+const status = situacaoEstoque(p.estoque);
+
+const card = document.createElement("div");
+card.className = "product";
+
+if(p.promocao){
+const selo = document.createElement("span");
+selo.className = "promo";
+selo.textContent = "PROMOÇÃO";
+card.appendChild(selo);
+}
+
+const area = document.createElement("div");
+area.className = "image-area";
+area.onclick = () => abrirDetalhes(p.id);
+
+const img = document.createElement("img");
+img.src = p.imagem;
+img.alt = p.nome;
+img.onerror = function(){
+this.style.display = "none";
+area.textContent = "Foto indisponível";
+};
+
+area.appendChild(img);
+
+const nome = document.createElement("h3");
+nome.textContent = p.nome;
+
+const preco = document.createElement("div");
+preco.className = "price";
+preco.textContent = p.preco > 0
+? formatarPreco(p.preco)
+: "Consulte o preço";
+
+const estoque = document.createElement("span");
+estoque.className = "stock "+status.classe;
+estoque.textContent = status.texto;
+
+const botao = document.createElement("button");
+botao.className = "add-button";
+botao.textContent = "VER PRODUTO";
+botao.onclick = () => abrirDetalhes(p.id);
+
+card.append(area,nome,preco,estoque,document.createElement("br"),botao);
+
+lista.appendChild(card);
+
+});
+
+}
+
+// ======================================
+// DETALHES DO PRODUTO
+// ======================================
+
+function abrirDetalhes(id){
+
+const p = produtos.find(x => String(x.id) === String(id));
+if(!p) return;
+
+produtoSelecionado = p;
+tamanhoSelecionado = "";
+
+document.getElementById("detail-name").textContent = p.nome;
+
+document.getElementById("detail-image").src = p.imagem;
+document.getElementById("detail-image").alt = p.nome;
+
+document.getElementById("detail-price").textContent =
+p.preco > 0 ? formatarPreco(p.preco) : "Consulte o preço";
+
+document.getElementById("detail-description").textContent =
+p.descricao || "Entre em contato pelo WhatsApp para saber mais sobre este produto.";
+
+document.getElementById("detail-specs").innerHTML = "";
+
+const especificacoes = document.getElementById("detail-specs");
+
+const categoria = document.createElement("div");
+categoria.textContent = "Categoria: " + (p.categoria || "Não informada");
+
+const estoque = document.createElement("div");
+estoque.textContent = "Estoque: " + p.estoque + " unidade(s)";
+
+const detalheExtra = document.createElement("div");
+detalheExtra.textContent = p.especificacoes
+? "Especificações: " + p.especificacoes
+: "Especificações adicionais: consulte pelo WhatsApp.";
+
+especificacoes.append(categoria,estoque,detalheExtra);
+
+const areaTamanhos = document.getElementById("detail-sizes");
+areaTamanhos.innerHTML = "";
+
+p.tamanhos.forEach(tamanho => {
+
+const botao = document.createElement("button");
+botao.className = "size-option";
+botao.textContent = tamanho;
+
+botao.onclick = () => {
+
+tamanhoSelecionado = tamanho;
+
+document.querySelectorAll(".size-option").forEach(b => {
+b.classList.remove("selected");
+});
+
+botao.classList.add("selected");
+
+};
+
+areaTamanhos.appendChild(botao);
+
+});
+
+document.getElementById("detail-buy").disabled = p.estoque <= 0;
+document.getElementById("detail-buy").textContent =
+p.estoque > 0 ? "ADICIONAR AO CARRINHO" : "ESGOTADO";
+
+document.getElementById("detail-panel").classList.add("open");
+
+}
+
+function fecharDetalhes(){
+document.getElementById("detail-panel").classList.remove("open");
+}
+
+function fecharDetalheFundo(event){
+if(event.target.id === "detail-panel") fecharDetalhes();
+}
+
+function ampliarFoto(){
+
+if(!produtoSelecionado || !produtoSelecionado.imagem) return;
+
+document.getElementById("zoom-image").src = produtoSelecionado.imagem;
+document.getElementById("zoom-panel").classList.add("open");
+
+}
+
+function fecharZoom(){
+document.getElementById("zoom-panel").classList.remove("open");
+}
+
+// ======================================
+// ADICIONAR PRODUTO COM TAMANHO
+// ======================================
+
+function adicionarDetalhe(){
+
+if(!produtoSelecionado) return;
+
+if(!tamanhoSelecionado){
+alert("Escolha um tamanho antes de continuar!");
+return;
+}
+
+adicionar(produtoSelecionado.id,tamanhoSelecionado);
+
+if(!document.getElementById("detail-buy").disabled){
+fecharDetalhes();
+alert("Produto adicionado ao carrinho!");
+}
+
+}
+
+// ======================================
+// FILTROS
+// ======================================
+
+document.getElementById("menu").addEventListener("click",function(event){
+
+const botao = event.target.closest("button[data-filter]");
+if(!botao) return;
+
+filtroAtual = botao.dataset.filter;
+
+document.querySelectorAll("#menu button").forEach(b => {
+b.classList.toggle("active",b === botao);
+});
+
+const titulos = {
+todos:"NOSSOS PRODUTOS",
+masculino:"MODA MASCULINA",
+conjuntos:"CONJUNTOS",
+promocao:"🔥 PROMOÇÕES"
+};
+
+document.getElementById("titulo").textContent = titulos[filtroAtual];
+
+renderizarProdutos();
+
+});
+
+// ======================================
+// CARRINHO
+// ======================================
+
+function adicionar(id,tamanho){
+
+const produto = produtos.find(p => String(p.id) === String(id));
+
+if(!produto || produto.estoque <= 0){
+alert("Produto esgotado!");
+return false;
+}
+
+const existente = carrinho.find(p =>
+String(p.id) === String(id) && p.tamanho === tamanho
+);
+
+const quantidadeTotal = carrinho
+.filter(p => String(p.id) === String(id))
+.reduce((s,p) => s + p.quantidade,0);
+
+if(quantidadeTotal >= produto.estoque){
+alert("Não temos mais unidades disponíveis!");
+return false;
+}
+
+if(existente){
+existente.quantidade++;
+}else{
+carrinho.push({
+...produto,
+quantidade:1,
+tamanho:tamanho
+});
+}
+
+atualizarCarrinho();
+return true;
+
+}
+
+function atualizarCarrinho(){
+
+const lista = document.getElementById("cart-items");
+
+const quantidade = carrinho.reduce((total,p) => total+p.quantidade,0);
+
+document.getElementById("cart-count").textContent = quantidade;
+
+if(!carrinho.length){
+
+lista.innerHTML = '<div class="empty">Seu carrinho está vazio.</div>';
+
+document.getElementById("cart-total").textContent =
+"Consulte os valores pelo WhatsApp.";
+
+return;
+}
+
+lista.innerHTML = "";
+
+carrinho.forEach(produto => {
+
+const item = document.createElement("div");
+item.className = "cart-item";
+
+const img = document.createElement("img");
+img.src = produto.imagem;
+img.alt = produto.nome;
+
+const info = document.createElement("div");
+info.className = "cart-info";
+
+const nome = document.createElement("h3");
+nome.textContent = produto.nome;
+
+const preco = document.createElement("p");
+preco.textContent = produto.preco > 0
+? formatarPreco(produto.preco)
+: "Consultar preço";
+
+const tamanho = document.createElement("p");
+tamanho.textContent = "Tamanho: " + produto.tamanho;
+
+const controles = document.createElement("div");
+controles.className = "quantity";
+
+const menos = document.createElement("button");
+menos.textContent = "−";
+menos.onclick = () => alterarQuantidade(produto.id,produto.tamanho,-1);
+
+const numero = document.createElement("span");
+numero.textContent = produto.quantidade;
+
+const mais = document.createElement("button");
+mais.textContent = "+";
+mais.onclick = () => alterarQuantidade(produto.id,produto.tamanho,1);
+
+const excluir = document.createElement("button");
+excluir.textContent = "X";
+excluir.className = "remove";
+excluir.onclick = () => remover(produto.id,produto.tamanho);
+
+controles.append(menos,numero,mais,excluir);
+info.append(nome,preco,tamanho,controles);
+item.append(img,info);
+
+lista.appendChild(item);
+
+});
+
+const total = carrinho.reduce(
+(soma,p) => soma+p.preco*p.quantidade,0
+);
+
+const desconhecido = carrinho.some(p => p.preco <= 0);
+
+document.getElementById("cart-total").textContent =
+desconhecido
+? "Consulte os valores pelo WhatsApp."
+: "Total: "+formatarPreco(total);
+
+}
+
+function alterarQuantidade(id,tamanho,valor){
+
+const item = carrinho.find(p =>
+String(p.id) === String(id) && p.tamanho === tamanho
+);
+
+const original = produtos.find(p => String(p.id) === String(id));
+
+if(!item || !original) return;
+
+const quantidadeTotal = carrinho
+.filter(p => String(p.id) === String(id))
+.reduce((s,p) => s+p.quantidade,0);
+
+if(valor > 0 && quantidadeTotal >= original.estoque){
+alert("Não temos mais unidades disponíveis.");
+return;
+}
+
+item.quantidade += valor;
+
+if(item.quantidade <= 0){
+remover(id,tamanho);
+}else{
+atualizarCarrinho();
+}
+
+}
+
+function remover(id,tamanho){
+
+carrinho = carrinho.filter(p =>
+!(String(p.id) === String(id) && p.tamanho === tamanho)
+);
+
+atualizarCarrinho();
+
+}
+
+function limparCarrinho(){
+
+carrinho = [];
+atualizarCarrinho();
+
+}
+
+// ======================================
+// ABRIR E FECHAR CARRINHO
+// ======================================
+
+function abrirCarrinho(){
+document.getElementById("cart-panel").classList.add("open");
+}
+
+function fecharCarrinho(){
+document.getElementById("cart-panel").classList.remove("open");
+}
+
+function fecharFundo(event){
+if(event.target.id === "cart-panel") fecharCarrinho();
+}
+
+// ======================================
+// FINALIZAR NO WHATSAPP
+// ======================================
+
+function finalizarPedido(){
+
+if(!carrinho.length){
+alert("Adicione algum produto primeiro!");
+return;
+}
+
+let mensagem = "Olá! Quero fazer um pedido na Império da Modas!\n\n";
+
+carrinho.forEach(item => {
+
+mensagem +=
+"Produto: "+item.nome+
+"\nTamanho: "+item.tamanho+
+"\nQuantidade: "+item.quantidade+
+"\nPreço unitário: "+
+(item.preco > 0 ? formatarPreco(item.preco) : "Consultar")+
+"\n\n";
+
+});
+
+const total = carrinho.reduce(
+(soma,p) => soma+p.preco*p.quantidade,0
+);
+
+if(carrinho.every(p => p.preco > 0)){
+mensagem += "Total: "+formatarPreco(total)+"\n\n";
+}
+
+mensagem += "Gostaria de confirmar meu pedido. Obrigado!";
+
+const link = "https://wa.me/5534997211828?text="+encodeURIComponent(mensagem);
+
+window.open(link,"_blank");
+
+}
+
+// ======================================
+// INICIAR
+// ======================================
+
+carregarProdutos();
+
+</script>
+
+</body>
+</html>
